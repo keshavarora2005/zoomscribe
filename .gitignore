@@ -1,0 +1,11 @@
+@"
+venv/
+.env
+__pycache__/
+*.pyc
+*.mp3
+*.pdf
+*.egg-info/
+.watchfiles
+tmp/
+"@ | Out-File -FilePath .gitignore -Encoding utf8

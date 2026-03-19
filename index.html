@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZoomScribe — Meeting Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0a0b;
+    --surface:  #111114;
+    --card:     #17171b;
+    --border:   #2a2a32;
+    --accent:   #7c6aff;
+    --accent2:  #3ecfcf;
+    --text:     #e8e6ff;
+    --muted:    #6b6885;
+    --success:  #22d47a;
+    --warn:     #f0a940;
+    --error:    #ff5c5c;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── grid noise background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── glow blobs ── */
+  body::after {
+    content: '';
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,255,.07) 0%, transparent 70%);
+    top: -200px; right: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 36px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 52px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    font-family: var(--mono);
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── hero ── */
+  .hero {
+    margin-bottom: 52px;
+  }
+
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 52px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 460px;
+    font-family: var(--mono);
+  }
+
+  /* ── submit card ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 16px 16px 0 0;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 14px 18px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .url-input::placeholder { color: var(--muted); }
+
+  .url-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,.12);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 14px 28px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, transform .1s, box-shadow .15s;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-primary:hover {
+    background: #8f7fff;
+    box-shadow: 0 4px 20px rgba(124,106,255,.35);
+  }
+
+  .btn-primary:active { transform: scale(.97); }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+  .options-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .opt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .opt-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .opt-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .opt-input:focus { border-color: var(--accent); }
+
+  /* ── jobs list ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .jobs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .job-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    transition: border-color .2s;
+    animation: slide-in .3s ease;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .job-card:hover { border-color: #3a3a45; }
+
+  .job-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .job-url {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 480px;
+  }
+
+  .job-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .job-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 2px;
+  }
+
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .status-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .pill-queued    { color: var(--muted);   background: rgba(107,104,133,.15); }
+  .pill-joining   { color: var(--accent);  background: rgba(124,106,255,.12); }
+  .pill-recording { color: var(--error);   background: rgba(255,92,92,.12);   }
+  .pill-transcribing { color: var(--warn); background: rgba(240,169,64,.12);  }
+  .pill-done      { color: var(--success); background: rgba(34,212,122,.12);  }
+  .pill-error     { color: var(--error);   background: rgba(255,92,92,.12);   }
+
+  .recording-blink::before {
+    animation: blink .8s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .job-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .job-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-dl {
+    background: rgba(34,212,122,.12);
+    color: var(--success);
+    border: 1px solid rgba(34,212,122,.25);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background .15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-dl:hover { background: rgba(34,212,122,.2); }
+
+  .btn-del {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+
+  .btn-del:hover { color: var(--error); border-color: var(--error); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+
+  .error-msg {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--error);
+    background: rgba(255,92,92,.07);
+    border: 1px solid rgba(255,92,92,.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* ── toast ── */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity .25s, transform .25s;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── responsive ── */
+  @media (max-width: 540px) {
+    .input-row { flex-direction: column; }
+    .job-card  { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <span class="logo-mark">//</span>
+      <span class="logo-text">ZoomScribe</span>
+      <span class="logo-badge">BETA</span>
+    </div>
+    <span style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="health-badge">● connecting…</span>
+  </header>
+
+  <section class="hero">
+    <h1>Meeting transcripts,<br><span>on autopilot.</span></h1>
+    <p>// paste a zoom link → bot joins → speaker-labelled PDF lands in your browser</p>
+  </section>
+
+  <div class="card">
+    <div class="card-label">// new recording</div>
+    <div class="input-row">
+      <input class="url-input" id="zoom-url" type="url"
+             placeholder="https://zoom.us/j/123456789?pwd=…"
+             autocomplete="off" spellcheck="false">
+      <button class="btn-primary" id="submit-btn" onclick="submitJob()">
+        Dispatch Bot →
+      </button>
+    </div>
+    <div class="options-row">
+      <div class="opt-field">
+        <span class="opt-label">// bot display name</span>
+        <input class="opt-input" id="bot-name" value="Notetaker" maxlength="30">
+      </div>
+      <div class="opt-field">
+        <span class="opt-label">// meeting title (for PDF)</span>
+        <input class="opt-input" id="meeting-title" value="Meeting Transcript" maxlength="60">
+      </div>
+    </div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <div class="section-title">// active &amp; past jobs</div>
+  <div class="jobs-list" id="jobs-list">
+    <div class="empty-state">
+      no jobs yet<br>
+      paste a zoom link above to get started
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── config — change this to your Railway URL ──────────────────────────────
+  const API = (window.ZOOMSCRIBE_API || 'http://localhost:8000').replace(/\/$/, '');
+
+  // ── state ─────────────────────────────────────────────────────────────────
+  const jobs = {};       // job_id → job object
+  const pollers = {};    // job_id → interval id
+
+  // ── health check ──────────────────────────────────────────────────────────
+  async function checkHealth() {
+    const el = document.getElementById('health-badge');
+    try {
+      const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) });
+      if (r.ok) {
+        el.textContent = '● api online';
+        el.style.color = 'var(--success)';
+      } else throw new Error();
+    } catch {
+      el.textContent = '● api offline';
+      el.style.color = 'var(--error)';
+    }
+  }
+  checkHealth();
+  setInterval(checkHealth, 30_000);
+
+  // ── submit ────────────────────────────────────────────────────────────────
+  async function submitJob() {
+    const url    = document.getElementById('zoom-url').value.trim();
+    const name   = document.getElementById('bot-name').value.trim() || 'Notetaker';
+    const title  = document.getElementById('meeting-title').value.trim() || 'Meeting Transcript';
+    const errEl  = document.getElementById('error-msg');
+    const btn    = document.getElementById('submit-btn');
+
+    errEl.classList.remove('show');
+
+    if (!url || !url.includes('zoom.us')) {
+      errEl.textContent = '× please paste a valid zoom.us meeting link';
+      errEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'dispatching…';
+
+    try {
+      const r = await fetch(`${API}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zoom_url: url, bot_name: name, meeting_title: title })
+      });
+      if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+      const data = await r.json();
+      document.getElementById('zoom-url').value = '';
+      addJob({ id: data.job_id, zoom_url: url, bot_name: name,
+               meeting_title: title, status: 'queued',
+               created_at: new Date().toISOString(), pdf_ready: false });
+      startPolling(data.job_id);
+      toast('Bot dispatched ✓');
+    } catch (e) {
+      errEl.textContent = `× ${e.message}`;
+      errEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Dispatch Bot →';
+    }
+  }
+
+  // ── polling ───────────────────────────────────────────────────────────────
+  function startPolling(id) {
+    pollers[id] = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/jobs/${id}`);
+        if (!r.ok) return;
+        const job = await r.json();
+        jobs[id] = job;
+        renderJob(id);
+        if (job.status === 'done' || job.status === 'error') {
+          clearInterval(pollers[id]);
+          delete pollers[id];
+          if (job.status === 'done') toast(`Transcript ready for "${job.meeting_title}" ✓`);
+        }
+      } catch { /* network blip — keep polling */ }
+    }, 4000);
+  }
+
+  // ── render ────────────────────────────────────────────────────────────────
+  function addJob(job) {
+    jobs[job.id] = job;
+    renderAll();
+  }
+
+  function renderAll() {
+    const list = document.getElementById('jobs-list');
+    if (Object.keys(jobs).length === 0) {
+      list.innerHTML = '<div class="empty-state">no jobs yet<br>paste a zoom link above to get started</div>';
+      return;
+    }
+    // Re-render all; keep existing DOM nodes to avoid flicker
+    const sorted = Object.values(jobs).sort((a,b) => b.created_at.localeCompare(a.created_at));
+    sorted.forEach(j => {
+      if (!document.getElementById(`job-${j.id}`)) {
+        const el = document.createElement('div');
+        el.id = `job-${j.id}`;
+        list.querySelector('.empty-state')?.remove();
+        list.prepend(el);
+      }
+      renderJob(j.id);
+    });
+  }
+
+  function renderJob(id) {
+    const job = jobs[id];
+    const el = document.getElementById(`job-${id}`);
+    if (!el) return;
+
+    const statusMap = {
+      queued:       ['queued',       '⧖ queued'],
+      joining:      ['joining',      '↗ joining meeting'],
+      recording:    ['recording',    '● recording'],
+      transcribing: ['transcribing', '⟳ transcribing'],
+      done:         ['done',         '✓ done'],
+      error:        ['error',        '✗ error'],
+    };
+    const [pillClass, pillLabel] = statusMap[job.status] || ['queued','unknown'];
+    const blinkClass = job.status === 'recording' ? ' recording-blink' : '';
+
+    const created = new Date(job.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const duration = job.duration_seconds
+      ? `${Math.floor(job.duration_seconds/60)}m ${job.duration_seconds%60}s`
+      : '';
+
+    const actions = job.status === 'done'
+      ? `<a class="btn-dl" href="${API}/jobs/${id}/pdf" target="_blank" download>
+           ↓ PDF
+         </a>`
+      : '';
+
+    el.className = 'job-card';
+    el.innerHTML = `
+      <div class="job-meta">
+        <div class="job-title">${esc(job.meeting_title)}</div>
+        <div class="job-url">${esc(job.zoom_url)}</div>
+        <div class="job-footer">
+          <span class="status-pill pill-${pillClass}${blinkClass}">${pillLabel}</span>
+          ${duration ? `<span class="job-time">${duration}</span>` : ''}
+          <span class="job-time">${created}</span>
+          ${job.error ? `<span style="color:var(--error);font-family:var(--mono);font-size:11px">${esc(job.error).slice(0,60)}</span>` : ''}
+        </div>
+      </div>
+      <div class="job-actions">
+        ${actions}
+        <button class="btn-del" onclick="deleteJob('${id}')">✕</button>
+      </div>
+    `;
+  }
+
+  async function deleteJob(id) {
+    clearInterval(pollers[id]);
+    delete pollers[id];
+    delete jobs[id];
+    document.getElementById(`job-${id}`)?.remove();
+    if (Object.keys(jobs).length === 0) renderAll();
+    try { await fetch(`${API}/jobs/${id}`, { method: 'DELETE' }); } catch {}
+  }
+
+  // ── toast ──────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── utils ──────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Enter key on URL input
+  document.getElementById('zoom-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitJob();
+  });
+</script>
+</body>
+</html>

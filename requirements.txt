@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+playwright
+reportlab
+requests
+python-multipart
+python-dotenv
+pydantic

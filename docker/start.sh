@@ -3,13 +3,15 @@ set -e
 
 echo "ZoomScribe starting..."
 
+# Start PulseAudio as system daemon
 mkdir -p /tmp/pulse
-pulseaudio --start --exit-idle-time=-1 --disallow-exit --daemon --log-level=warn
+pulseaudio -D --system=false --exit-idle-time=-1 --disallow-exit --log-level=warn -n --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/native" --load="module-null-sink sink_name=zoomscribe_sink sink_properties=device.description=ZoomScribe" --load="module-native-protocol-tcp auth-anonymous=1" 2>/dev/null || true
 
-echo "PulseAudio started"
-sleep 1
+sleep 2
+export PULSE_SERVER=unix:/tmp/pulse/native
 
-pactl list sinks short 2>/dev/null || echo "(pactl check skipped)"
+echo "PulseAudio attempted"
+pactl list sinks short 2>/dev/null || echo "(no sinks yet - continuing)"
 
 mkdir -p /tmp/zoomscribe
 

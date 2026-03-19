@@ -1,0 +1,7 @@
+@"
+load-module module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/native
+load-module module-native-protocol-tcp auth-anonymous=1
+load-module module-null-sink sink_name=zoomscribe_sink sink_properties=device.description=ZoomScribe
+set-default-sink zoomscribe_sink
+set-default-source zoomscribe_sink.monitor
+"@ | Out-File -FilePath docker/pulse-default.pa -Encoding utf8 -NoNewline

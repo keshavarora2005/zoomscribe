@@ -155,8 +155,8 @@ async def join_and_record(
             try:
                 el = page.locator(sel).first
                 await el.wait_for(state="visible", timeout=5_000)
-                await el.triple_click()
-                await el.type(bot_name, delay=50)
+                await el.click()
+                await el.fill(bot_name)
                 logger.info(f"Name filled via: {sel}")
                 name_filled = True
                 break

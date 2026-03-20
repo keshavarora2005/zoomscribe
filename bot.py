@@ -252,8 +252,9 @@ async def join_and_record(
 
         # stay in meeting
         start_time = time.time()
-        MIN_RECORD_SECS = 20   # ignore end-signals for the first N seconds
-        end_signal_count = 0   # require 2 consecutive detections to confirm
+        initial_url = page.url            # save to detect real redirects
+        MIN_RECORD_SECS = 20              # ignore end-signals for the first N seconds
+        end_signal_count = 0              # require 2 consecutive detections to confirm
 
         while True:
             elapsed = time.time() - start_time
@@ -264,14 +265,9 @@ async def join_and_record(
             try:
                 current_url = page.url
 
-                # Redirected away = meeting ended (always trust this)
+                # Redirected away from /wc/ entirely = meeting ended
                 if "/wc/" not in current_url:
-                    logger.info(f"Redirected away — meeting ended")
-                    break
-
-                # Back on pre-join = kicked (always trust this)
-                if "join?" in current_url:
-                    logger.info("Back on pre-join — kicked from meeting")
+                    logger.info(f"Redirected away — meeting ended (url: {current_url[:80]})")
                     break
 
                 # Only check text-based end signals after minimum recording time

@@ -225,3 +225,30 @@ def delete_job(job_id: str):
 @app.get("/jobs")
 def list_jobs():
     return list(JOBS.values())
+
+
+@app.post("/jobs/{job_id}/force-complete")
+async def force_complete(job_id: str, bg: BackgroundTasks):
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    
+    audio_path = WORK_DIR / f"{job_id}.mp3"
+    pdf_path   = str(WORK_DIR / f"{job_id}.pdf")
+    
+    if not audio_path.exists():
+        raise HTTPException(404, f"Audio file not found — bot may not have recorded anything")
+    
+    async def _transcribe():
+        _update(job_id, status=JobStatus.transcribing)
+        from transcriber import audio_to_pdf
+        await asyncio.to_thread(
+            audio_to_pdf,
+            str(audio_path),
+            pdf_path,
+            job.get("meeting_title", "Meeting Transcript"),
+        )
+        _update(job_id, status=JobStatus.done, pdf_ready=True)
+    
+    bg.add_task(_transcribe)
+    return {"message": "Transcription started", "job_id": job_id}

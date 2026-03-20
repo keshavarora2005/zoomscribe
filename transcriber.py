@@ -52,6 +52,7 @@ def upload_audio(file_path: str) -> str:
 def transcribe(audio_url: str, language_detection: bool = True) -> dict:
     payload = {
         "audio_url": audio_url,
+        "speech_model": "universal-2",
         "language_detection": language_detection,
         "punctuate": True,
         "format_text": True,

@@ -252,33 +252,62 @@ async def join_and_record(
 
         # stay in meeting
         start_time = time.time()
+        MIN_RECORD_SECS = 20   # ignore end-signals for the first N seconds
+        end_signal_count = 0   # require 2 consecutive detections to confirm
 
         while True:
-            if time.time() - start_time > max_duration_seconds:
+            elapsed = time.time() - start_time
+            if elapsed > max_duration_seconds:
                 logger.info("Max duration reached")
                 break
 
             try:
                 current_url = page.url
 
-                # Redirected away = meeting ended
+                # Redirected away = meeting ended (always trust this)
                 if "/wc/" not in current_url:
                     logger.info(f"Redirected away — meeting ended")
                     break
 
-                # Check page text
-                content = await page.content()
-                if any(p.lower() in content.lower() for p in [
-                    "meeting has ended", "been ended by the host",
-                    "this meeting has ended"
-                ]):
-                    logger.info("Meeting ended text found")
-                    break
-
-                # Back on pre-join = kicked
+                # Back on pre-join = kicked (always trust this)
                 if "join?" in current_url:
                     logger.info("Back on pre-join — kicked from meeting")
                     break
+
+                # Only check text-based end signals after minimum recording time
+                if elapsed > MIN_RECORD_SECS:
+                    # Use visible text only (NOT raw HTML which has false positives)
+                    try:
+                        visible_text = await page.inner_text("body", timeout=5_000)
+                    except Exception:
+                        visible_text = ""
+
+                    ended_phrases = [
+                        "meeting has ended",
+                        "been ended by the host",
+                        "this meeting has ended",
+                        "the host has ended the meeting",
+                    ]
+                    if any(p in visible_text.lower() for p in ended_phrases):
+                        end_signal_count += 1
+                        logger.info(f"Meeting-end text detected ({end_signal_count}/2)")
+                        if end_signal_count >= 2:
+                            logger.info("Meeting ended confirmed")
+                            break
+                    else:
+                        end_signal_count = 0  # reset if not seen consecutively
+
+                    # Also check if Leave/Mute buttons disappeared (strong signal)
+                    mute_btn = await page.query_selector(
+                        'button[aria-label*="Mute" i], button[aria-label*="Unmute" i]'
+                    )
+                    leave_btn = await page.query_selector('button[aria-label*="Leave" i]')
+                    if not mute_btn and not leave_btn:
+                        logger.info("Meeting controls disappeared — meeting likely ended")
+                        end_signal_count += 1
+                        if end_signal_count >= 2:
+                            logger.info("Meeting ended confirmed (controls gone)")
+                            break
 
             except Exception as e:
                 logger.warning(f"Loop error: {e}")

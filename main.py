@@ -177,8 +177,8 @@ async def create_job(req: CreateJobRequest, bg: BackgroundTasks):
         "pdf_ready":     False,
     }
     _save_jobs()
-    bg.add_task(_run_job, job_id)
-    logger.info(f"Job created: {job_id} for {req.zoom_url}")
+    # Worker process picks this up automatically via jobs.json polling
+    logger.info(f"Job queued: {job_id} for {req.zoom_url}")
     return CreateJobResponse(
         job_id=job_id,
         status="queued",

@@ -56,12 +56,13 @@ def transcribe(audio_url: str, language_detection: bool = True) -> dict:
         "punctuate": True,
         "format_text": True,
         "speaker_labels": True,
-        "auto_highlights": True,       # key phrases
         "sentiment_analysis": False,   # keep free-tier friendly
     }
     headers = {**_headers(), "content-type": "application/json"}
     logger.info("Submitting transcription job…")
     resp = requests.post(BASE_URL + "/transcript", json=payload, headers=headers)
+    if not resp.ok:
+        logger.error(f"AssemblyAI transcript error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
     transcript_id = resp.json()["id"]
     logger.info(f"Transcript ID: {transcript_id}")
@@ -183,6 +184,9 @@ def save_pdf(result: dict, output_path: str, meeting_title: str = "Meeting Trans
 # ── convenience end-to-end ────────────────────────────────────────────────────
 
 def audio_to_pdf(audio_path: str, output_pdf: str, meeting_title: str = "Meeting Transcript") -> str:
+    file_size = os.path.getsize(audio_path)
+    if file_size < 10_000:  # < 10 KB — likely empty/silent
+        raise RuntimeError(f"Audio file too small ({file_size} bytes) — nothing to transcribe")
     url = upload_audio(audio_path)
     result = transcribe(url)
     return save_pdf(result, output_pdf, meeting_title)
